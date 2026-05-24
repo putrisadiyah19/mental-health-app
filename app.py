@@ -23,7 +23,7 @@ MODEL_PATH = "model_hybrid_terbaik.pt"
 # Cara dapat ID: klik kanan file di Drive → "Dapatkan link" → salin ID dari URL
 # Contoh URL: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWx/view
 # ID-nya adalah: 1AbCdEfGhIjKlMnOpQrStUvWx
-GDRIVE_FILE_ID = "ISI_DENGAN_ID_FILE_GOOGLE_DRIVE_KAMU"
+GDRIVE_FILE_ID = "https://drive.google.com/file/d/1FuWPSfBN9jgDvSJX3rN8X8jl1dvuslMA/view?usp=sharing"
 
 LABEL_MAP = {
     0: "ADHD (Gangguan Fokus)",
