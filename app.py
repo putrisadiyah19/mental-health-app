@@ -1,6 +1,5 @@
 import streamlit as st
 import torch
-import gdown
 import os
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from datetime import datetime
@@ -17,14 +16,6 @@ st.set_page_config(
 # ================================================
 # KONSTANTA
 # ================================================
-MODEL_PATH = "model_hybrid_terbaik.pt"
-
-# Ganti dengan ID file Google Drive kamu
-# Cara dapat ID: klik kanan file di Drive → "Dapatkan link" → salin ID dari URL
-# Contoh URL: https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWx/view
-# ID-nya adalah: 1AbCdEfGhIjKlMnOpQrStUvWx
-GDRIVE_FILE_ID = "https://drive.google.com/file/d/1FuWPSfBN9jgDvSJX3rN8X8jl1dvuslMA/view?usp=sharing"
-
 LABEL_MAP = {
     0: "ADHD (Gangguan Fokus)",
     1: "Anxiety (Kecemasan)",
@@ -92,32 +83,28 @@ SARAN_MAP = {
 }
 
 # ================================================
-# LOAD MODEL (dengan caching agar tidak reload)
+# LOAD MODEL
 # ================================================
 @st.cache_resource
 def load_model():
-    """Download dan load model dari Google Drive sekali saja."""
-    # Download model jika belum ada
-    if not os.path.exists(MODEL_PATH):
-        with st.spinner("📥 Mengunduh model dari Google Drive... (mungkin butuh 1-2 menit)"):
-            from huggingface_hub import hf_hub_download
-            MODEL_PATH = hf_hub_download(
-                repo_id="putrisadiyah19/mental-health-app",
-                filename="model_hybrid_adaptive.pt"
-    )
+    from huggingface_hub import hf_hub_download
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load tokenizer
+    with st.spinner("📥 Mengunduh model dari Hugging Face..."):
+        model_path = hf_hub_download(
+            repo_id="putrisadiyah19/mental-health-roberta",
+            filename="model_hybrid_adaptive.pt"
+        )
+
     tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
-    # Load model architecture + bobot
     model = RobertaForSequenceClassification.from_pretrained(
         "roberta-base",
         num_labels=6
     )
     model.load_state_dict(
-        torch.load(MODEL_PATH, map_location=device)
+        torch.load(model_path, map_location=device)
     )
     model.to(device)
     model.eval()
@@ -126,13 +113,11 @@ def load_model():
 
 
 def predict(text, model, tokenizer, device):
-    """Fungsi inferensi: teks → label + confidence."""
-    # Terjemahkan ke Bahasa Inggris jika perlu
     try:
         from deep_translator import GoogleTranslator
         text_en = GoogleTranslator(source="auto", target="en").translate(text)
     except Exception:
-        text_en = text  # fallback ke teks asli
+        text_en = text
 
     inputs = tokenizer(
         text_en,
@@ -147,7 +132,7 @@ def predict(text, model, tokenizer, device):
         outputs = model(**inputs)
         probs = torch.nn.functional.softmax(outputs.logits, dim=1)
 
-    pred_idx  = torch.argmax(probs).item()
+    pred_idx   = torch.argmax(probs).item()
     confidence = probs[0][pred_idx].item()
     all_probs  = {LABEL_MAP[i]: round(probs[0][i].item() * 100, 2) for i in range(6)}
 
@@ -161,14 +146,12 @@ st.title("🧠 Mental Health AI Classifier")
 st.markdown("**Sistem Skrining Kesehatan Mental berbasis NLP (RoBERTa Hybrid)**")
 st.markdown("---")
 
-# --- Disclaimer ---
 st.warning(
     "⚠️ **Disclaimer:** Alat ini hanya untuk skrining awal dan edukasi. "
     "Bukan pengganti diagnosis medis profesional. "
     "Jika mengalami masalah kesehatan mental, segera hubungi profesional."
 )
 
-# --- Input Form ---
 st.subheader("📋 Data Pasien")
 
 col1, col2 = st.columns(2)
@@ -188,25 +171,19 @@ keluhan = st.text_area(
     height=120
 )
 
-# --- Tombol Analisis ---
 if st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True):
     if not keluhan.strip():
         st.error("Tolong isi kolom keluhan terlebih dahulu.")
-    elif GDRIVE_FILE_ID == "ISI_DENGAN_ID_FILE_GOOGLE_DRIVE_KAMU":
-        st.error("⚠️ GDRIVE_FILE_ID belum diisi! Ganti dengan ID file Google Drive kamu di baris kode `GDRIVE_FILE_ID`.")
     else:
-        # Load model
         model, tokenizer, device = load_model()
 
-        # Prediksi
         with st.spinner("🤖 Model sedang menganalisis..."):
             pred_idx, confidence, all_probs = predict(keluhan, model, tokenizer, device)
 
-        label   = LABEL_MAP[pred_idx]
-        info    = SARAN_MAP[pred_idx]
+        label     = LABEL_MAP[pred_idx]
+        info      = SARAN_MAP[pred_idx]
         timestamp = datetime.now().strftime("%d-%m-%Y %H:%M")
 
-        # Tentukan level risiko
         if skala >= 8:
             risk_level = "🔴 RISIKO TINGGI"
             risk_color = "#E74C3C"
@@ -223,7 +200,6 @@ if st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True)
         st.markdown("---")
         st.subheader("📊 Hasil Analisis")
 
-        # --- Hasil Utama ---
         st.markdown(
             f"""
             <div style="background:{info['warna']}20; border-left:4px solid {info['warna']};
@@ -241,7 +217,6 @@ if st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True)
             unsafe_allow_html=True
         )
 
-        # --- Level Risiko ---
         st.markdown(
             f"""
             <div style="background:{risk_color}15; border:1px solid {risk_color}40;
@@ -254,16 +229,13 @@ if st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True)
             unsafe_allow_html=True
         )
 
-        # --- Rekomendasi ---
         st.markdown("**💡 Rekomendasi Intervensi Awal:**")
         for saran in info["saran"]:
             st.markdown(f"- {saran}")
 
-        # --- Distribusi Probabilitas ---
         st.markdown("**📈 Distribusi Probabilitas Semua Kelas:**")
         st.bar_chart(all_probs)
 
-        # --- Info Tambahan ---
         with st.expander("ℹ️ Informasi Anamnesis Lengkap"):
             st.markdown(f"""
             | Field | Nilai |
@@ -276,9 +248,6 @@ if st.button("🔍 Analisis Sekarang", type="primary", use_container_width=True)
             | Timestamp | {timestamp} |
             """)
 
-# ================================================
-# FOOTER
-# ================================================
 st.markdown("---")
 st.markdown(
     "<p style='text-align:center; color:gray; font-size:12px;'>"
