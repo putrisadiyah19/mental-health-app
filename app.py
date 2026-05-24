@@ -100,8 +100,11 @@ def load_model():
     # Download model jika belum ada
     if not os.path.exists(MODEL_PATH):
         with st.spinner("📥 Mengunduh model dari Google Drive... (mungkin butuh 1-2 menit)"):
-            url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}&confirm=t"
-            gdown.download(url, MODEL_PATH, quiet=False, fuzzy=True)
+            from huggingface_hub import hf_hub_download
+            MODEL_PATH = hf_hub_download(
+                repo_id="putrisadiyah19/mental-health-app",
+                filename="model_hybrid_adaptive.pt"
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

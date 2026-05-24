@@ -4,3 +4,4 @@ torch
 gdown
 deep-translator
 nltk
+huggingface_hub
