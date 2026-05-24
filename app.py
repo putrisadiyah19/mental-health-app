@@ -100,8 +100,8 @@ def load_model():
     # Download model jika belum ada
     if not os.path.exists(MODEL_PATH):
         with st.spinner("📥 Mengunduh model dari Google Drive... (mungkin butuh 1-2 menit)"):
-            url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
-            gdown.download(url, MODEL_PATH, quiet=False)
+            url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}&confirm=t"
+            gdown.download(url, MODEL_PATH, quiet=False, fuzzy=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
